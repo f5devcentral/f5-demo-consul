@@ -1,0 +1,15 @@
+{
+  "name": "ChenConsul",
+  "version": "0.0.1",
+  "description": "F5 iControlLX Worker for Consul Catalog",
+  "main": "chen_consul.js",
+  "dependencies": {
+    "consul": "^0.30.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Eric Chen",
+  "license": "MIT"
+}

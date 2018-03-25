@@ -1,0 +1,73 @@
+cli admin-partitions {
+    update-partition Common
+}
+sys application template /Common/f5.consul_pool {
+    actions {
+        definition {
+            html-help {
+                <!-- insert html help text -->
+            }
+            implementation {
+
+
+                set script_map [list CONSULSERVER $::pool__consulserver SERVICENAME $::pool__servicename NAME $::pool__name]
+
+                set script_template {
+        set mgmt_port [tmsh::get_config sys httpd ssl-port]
+        set mgmt_port [regexp -all -inline {\d+} $mgmt_port]
+        set members [exec /bin/bash -c "curl -sku admin: https://localhost:$mgmt_port/mgmt/shared/chen_consul?host=10.1.1.4\\&service=SERVICENAME"]
+        puts $members
+        if { $members eq "" } {
+           puts "Service Discovery: No matching members found"
+        }
+        elseif { $members ne "" } {
+           tmsh::modify ltm pool NAME members replace-all-with \{ $members \}
+       }
+    
+
+                }
+                set icall_script [string map $script_map $script_template]
+                tmsh::create sys icall script pool-update-consul \
+                    definition \{ $icall_script \}
+                tmsh::create sys icall handler periodic pool-update-consul \
+                    interval $::pool__interval script pool-update-consul
+            }
+            presentation {
+                section intro {
+                    message info "This iApp can be used to populate a LTM or GTM pool based on the results of a DNS lookup and to update the definition of the pool based on a recurring lookup."
+                    optional( info == "NOPE" ) {
+                        string is_gtm default tcl {
+                            package require iapp 1.0.0
+                            return [iapp::get_provisioned gtm]
+                        }
+                        string is_ltm default tcl {
+                            package require iapp 1.0.0
+                            return [iapp::get_provisioned ltm]
+                        }
+                    }
+                }
+                section pool {
+                    string name display "large" required
+                    string consulserver display "large" required validator "ipaddress"
+                    string interval display "small" required default "60"
+					string servicename display "large" required
+
+                }
+                text {
+                    intro "Introduction"
+                    intro.info ""
+                    pool "Pool Definition"
+                    pool.name "What do you want to call the pool?"
+
+                    pool.consulserver "What Consul server should we use (IP Address)?"
+                    pool.interval "How often should we check for changes?"
+                    pool.servicename "What Consul service name do you want to use for the pool?"
+                    
+                }
+            }
+            role-acl none
+            run-as none
+        }
+    }
+    description none
+}
