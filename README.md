@@ -28,7 +28,7 @@ Configure BIG-IP to use Consul's [DNS Interface](https://www.consul.io/docs/agen
 
 This works if all your services are using the same port.
 
-![Consul FQDN Pool](.images/consul-fqdn-01.png)
+![Consul FQDN Pool](images/consul-fqdn-01.png)
 
 2. Using an External Python script
 ----------------------------------
@@ -39,7 +39,7 @@ The F5 Python SDK can be used with the Consul API to query for pool members.  Th
 % python update.py --bigip-host 10.1.1.5 --consul-service f5-demo-app-8080 --pool-name python_pool
 ```
 
-![Consul Python Pool](.images/consul-python-pool.png)
+![Consul Python Pool](images/consul-python-pool.png)
 
 Code Snippet
 
@@ -76,7 +76,7 @@ The iControlLX code is used to query Consul and the iCall script updates the poo
 
 iApp prompts for pool name, Consul server IP, and Consul service name.  The Demo Consul iControlLX worker is installed if the BIG-IP does not already have it.
 
-![Consul Demo iApp](.images/consul-iapp.png)
+![Consul Demo iApp](images/consul-iapp.png)
 
 
 
