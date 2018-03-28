@@ -26,7 +26,7 @@ Examples
 
 Configure BIG-IP to use Consul's [DNS Interface](https://www.consul.io/docs/agent/dns.html):
 
-This works if all your services are using the same port.
+This works if all nodes for a service are using the same port (all pool members for a specific BIG-IP pool are using the same Service Port).
 
 ![Consul FQDN Pool](images/consul-fqdn-01.png)
 
