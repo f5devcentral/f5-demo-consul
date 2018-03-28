@@ -21,7 +21,7 @@ Examples
  1. Use an External Python script
  1. Use an iControlLX Worker
 
-1. Using FQDN Pool
+1\. Using FQDN Pool
 ------------------
 
 Configure BIG-IP to use Consul's [DNS Interface](https://www.consul.io/docs/agent/dns.html):
@@ -30,7 +30,7 @@ This works if all your services are using the same port.
 
 ![Consul FQDN Pool](images/consul-fqdn-01.png)
 
-2. Using an External Python script
+2\. Using an External Python script
 ----------------------------------
 
 The F5 Python SDK can be used with the Consul API to query for pool members.  This is useful in cases where you are using a dynamic range of pool member ports (i.e. with Registrator).
@@ -57,7 +57,7 @@ members = session.put(pool._meta_data['uri'],data=json.dumps({'members':pool_mem
 ...
 ```
 
-3. Using iControlLX Worker
+3\. Using iControlLX Worker
 ----------------------------
 
 Starting in TMOS 13.1 you can extend the BIG-IP Management plane functions with Node.JS.  The following is an example of using a traditional TCL iApp to onboard an iControlLX worker (RPM file) and create a Node.JS process that queries the Consul API.  This emulates similar methods used by the [F5 Service Discovery iApp](https://github.com/F5Networks/f5-cloud-iapps/tree/master/f5-service-discovery)
