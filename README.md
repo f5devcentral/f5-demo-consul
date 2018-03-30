@@ -33,7 +33,7 @@ This works if all nodes for a service are using the same port (all pool members 
 2\. Using an External Python script
 ----------------------------------
 
-The F5 Python SDK can be used with the Consul API to query for pool members.  This is useful in cases where you are using a dynamic range of pool member ports (i.e. with Registrator).
+The F5 Python SDK can be used (externally, not on the BIG-IP itself) with the Consul API to query for pool members.  This is useful in cases where you are using a dynamic range of pool member ports (i.e. with Registrator).
 
 ```
 % python update.py --bigip-host 10.1.1.5 --consul-service f5-demo-app-8080 --pool-name python_pool
