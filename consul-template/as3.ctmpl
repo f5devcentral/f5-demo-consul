@@ -34,7 +34,7 @@
 {{ $first := scratch.Get "first" }}
 {{ if eq $first false }},{{end}}
 {{ scratch.Set "first" false }}
-"{{.Key }} " : {
+"{{.Key }}" : {
     "class": "Tenant"
      }
 {{ end }}
@@ -42,5 +42,5 @@
 {{ if eq $first false }},{{end}}
   "schemaVersion": "3.9.0" }
 {{ else }}
-}}  "schemaVersion": "3.9.0"}
+}},  "schemaVersion": "3.9.0"}
 {{ end }}
