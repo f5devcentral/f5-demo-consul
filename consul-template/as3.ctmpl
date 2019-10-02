@@ -1,0 +1,46 @@
+{
+  "class": "ADC",
+{{ scratch.Set "first" true }}
+{{ range $tag, $services := services  | byTag }}
+{{ if ne $tag "as3" }}
+{{ $first := scratch.Get "first" }}
+{{ if eq $first false }}}},{{end}}
+{{ scratch.Set "first" false }}
+    "{{ $tag }}": {
+        "class": "Tenant",
+	    "Pools": {"class":"Application","template":"generic",
+{{ range $idx,$service :=$services}}
+{{ if .Tags | contains "as3" }}
+{{ if ne $idx 0}},{{end}}
+{{ $name := printf "%s.%s|any" $tag .Name }}
+"{{.Name}}": {
+    "class": "Pool",
+      "monitors":[{"bigip":"/Common/inband"}],
+      "members":[
+          {{range $idx2, $svc := service $name}}
+{{ if ne $idx2 0 }},{{end}}
+       {
+         {{ if ne .Status "passing" }}"adminState":"disable",{{end}}
+         "servicePort": {{.Port}},
+          "serverAddresses": [
+          "{{.Address}}"
+	  ]}{{end}}
+	  ]}
+  {{end}}{{end}}
+{{end}}{{end}}
+{{ $first := scratch.Get "first" }}
+{{ if eq $first  true }}
+{{ range ls "Tenant" }}
+{{ $first := scratch.Get "first" }}
+{{ if eq $first false }},{{end}}
+{{ scratch.Set "first" false }}
+"{{.Key }} " : {
+    "class": "Tenant"
+     }
+{{ end }}
+{{ $first := scratch.Get "first" }}
+{{ if eq $first false }},{{end}}
+  "schemaVersion": "3.9.0" }
+{{ else }}
+}}  "schemaVersion": "3.9.0"}
+{{ end }}

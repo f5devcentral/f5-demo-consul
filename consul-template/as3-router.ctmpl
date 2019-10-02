@@ -1,0 +1,29 @@
+{
+  "class": "ADC",
+  "schemaVersion": "3.9.0",
+    "LifeGuard": {
+        "class": "Tenant",
+            "Pools": {"class":"Application","template":"generic",
+{{ scratch.Set "first" true }}
+{{ range ls "Tenant" }}
+{{ $first := scratch.Get "first" }}
+{{ if eq $first false }},{{end}}
+{{ scratch.Set "first" false }}
+            "{{ .Key }}_choose_pool": {
+            "class": "iRule",
+            "iRule": "when CLIENTSSL_CLIENTHELLO {\n    set sni_exists [SSL::extensions exists -type 0]\n    if { $sni_exists }\n    { binary scan [SSL::extensions -type 0] S1S1S1cS1a* ssl_ext_type ssl_ext_len ssl_ext_sn_list_len ssl_ext_sn_type ssl_ext_sn_len ssl_ext_sn }\n    if { [info exists ssl_ext_sn]} {\n      #log local0. \"$ssl_ext_sn\"\n      set pool_name [getfield $ssl_ext_sn \".\" 1]\n      #log local0. \"$pool_name\"\n      if { [catch { pool /{{ .Key }}/Pools/$pool_name } ] } {\n        #log local0. \"no such pool $pool_name\"\n      }\n    }\n}"},
+                         "{{ .Key }}snirouter": {
+                "class": "Service_TCP",
+                "virtualAddresses": ["{{ .Value }}"],
+               "remark":"{{ .Key }}snirouter: f5demo.snirouter.tcp.v1",
+
+               "virtualPort": 443,
+               "persistenceMethods": ["tls-session-id"],
+               "iRules": [
+                   "{{ .Key }}_choose_pool"
+               ]
+			 }
+{{ end }}			 
+    }
+}
+}
