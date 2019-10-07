@@ -1,58 +1,20 @@
-{
-  "class": "ADC",
-  "schemaVersion": "3.9.0",
-         "Common": {
-          "class": "Tenant",
-          "Shared": {
-            "class": "Application",
-            "template": "shared",
-	     "myMonitor": {
-                "class": "GSLB_Monitor",
-                "monitorType": "tcp",
-                "send": ""
-            },
-	     "AS3DataCenter": {
-                      "class": "GSLB_Data_Center"
-              }
-              ,"AS3Server": {
-                                "class": "GSLB_Server",
-                                "dataCenter": 
-                                         {"use":"AS3DataCenter"}
-                                ,
-                                "devices": [
-                                            {
-                                                "address": "10.1.10.240",
-                                                "addressTranslation": "10.1.10.240"
-                                            },
-                                            {
-                                                "address": "10.1.10.241",
-                                                "addressTranslation": "10.1.10.241"
-                                            }					    
-                                ]
-                                ,
-                                "virtualServers": [
-
+{{/* comment or not */}}
 {{ scratch.Set "cnt" 0 }}
 {{ $idx := 0 }}
 {{ range $dc := datacenters }}
 {{ $tenant :=  printf "%s@%s" "Tenant" $dc }}
 {{  range ls $tenant }}
 {{ $cnt := scratch.Get "cnt" }}
-                                      {{ if  ne $cnt 0 }},{{ end }}
-                                      {
-                                             "address":"{{ .Value }}",
-                                             "addressTranslation":"{{ .Value }}",
-                                             "addressTranslationPort":443,
-                                             "port":443,
-					     "monitors": [ {"use":"myMonitor"}]
-				       }
-{{ $tenant_key := printf "%s@%s" .Key $dc }}
-{{ scratch.Set $tenant_key $cnt }}
-{{ scratch.MapSet "Tenants" .Key "1"}}
-{{ $cnt := $cnt | add 1 }}
-{{ scratch.Set "cnt" $cnt }}
-{{ $dc_filter :=  printf "@%s" $dc }}
-  {{ range $service := services $dc_filter }}
+			 {{ $newkey := printf "%d" $cnt }}
+			 {{ scratch.MapSet "VirtualServer" $newkey .Value }}
+                         {{ $tenant_key := printf "%s@%s" .Key $dc }}
+                         {{ scratch.Set $tenant_key $cnt }}
+                         {{ scratch.MapSet "Tenants" .Key 0}}
+
+                         {{ $cnt := $cnt | add 1 }}
+                         {{ scratch.Set "cnt" $cnt }}
+                         {{ $dc_filter :=  printf "@%s" $dc }}
+    {{ range $service := services $dc_filter }}
     {{ if $service.Tags | contains "as3" }}
        {{ $map_key := printf "%s/%s" $service.Name $dc }}
        {{ scratch.MapSet "Services" $service.Name "1" }}
@@ -72,6 +34,21 @@
 		{{ if ne $tag "as3" }}
        		   {{ $pool_key := printf "/%s/%s/%s" $dc $tag $svc }}
 		   {{ scratch.Set $pool_key $status }}
+		     {{ if ne $status "none" }}
+                       {{ $tenant_key := printf "%s@%s" $tag $dc }}
+		       {{ $cnt := scratch.Get $tenant_key }}
+
+                      {{ $has_key := scratch.Key $tenant_key }} {{ if $has_key }}
+
+                         {{ scratch.MapSet "Tenants" $tag 1}}		      
+		      {{ end }}
+
+			 {{ $newkey := printf "%s/%s/%s%s/Vs" $tag $svc $dc $svc }}
+			 {{ scratch.MapSet "GSLB" $newkey $cnt }}
+			 {{ $newkey := printf "%s/%s/%s%s/Health" $tag $svc $dc $svc }}			 
+ 			 {{ scratch.MapSet "GSLB" $newkey $status }}
+
+  		     {{ end }}
 		   {{ end }}
 		{{ end }}		   		
 
@@ -80,84 +57,125 @@
   {{ end }}
 {{ end }}
 {{ end }}
-				       ]
-                        }
-          }
-       },
 
+{{/* scratch.Get "GSLB" | explodeMap | toJSON */}}
+{{/* scratch.Get "VirtualServer" | explodeMap | toJSON */}}
+
+{{ $gslb := scratch.Get "GSLB" | explodeMap }}
+{
+  "class": "ADC",
+  "schemaVersion": "3.9.0",
+         "Common": {
+          "class": "Tenant"{{ if keyExists "DnsDevice"}},	  
+          "Shared": {
+            "class": "Application",
+            "template": "shared",
+	     "myMonitor": {
+                "class": "GSLB_Monitor",
+                "monitorType": "tcp",
+                "send": ""
+            },
+	     "AS3DataCenter": {
+                      "class": "GSLB_Data_Center"
+              }
+              ,"AS3Server": {
+                                "class": "GSLB_Server",
+                                "dataCenter": 
+                                         {"use":"AS3DataCenter"}
+                                ,
+                                "devices": [
+                                            {
+                                                "address": "{{ key "DnsDevice"}}",
+                                                "addressTranslation": "{{ key "DnsDevice"}}"
+                                            }
+                                ]
+                                ,
+                                "virtualServers": [				
+                                 {{ $vs := scratch.Get "VirtualServer" }}
+                                 {{ range $key, $value := $vs }}
+                                      {{ if  ne $key "0" }},{{ end }}
+                                      {
+                                             "address":"{{ $value }}",
+                                             "addressTranslation":"{{ $value }}",
+                                             "addressTranslationPort":443,
+                                             "port":443,
+					     "monitors": [ {"use":"myMonitor"}]
+				       }
+                                {{ end }}
+				 ]
+				 }
+				 } } {{/* end if DnsDevice */}}
+				 {{ else }}
+				 } 
+                           {{ end }}
+
+{{ range $key, $value := $gslb }}
+
+{{ scratch.MapSet "Tenants" $key $value }}
+{{ end }}
 {{ $tenants := scratch.Get "Tenants" }}
+
 {{ $services := scratch.Get "Services" }}
 
 {{ range $key, $val := $tenants }}
 {{ $z := scratch.Get "z" }}
- {{ if $z }},{{end }}
+ ,
  {{ scratch.Set "z" 1 }}
+ {{ scratch.Set "y" 0 }}	     
     "{{ $key }}Dns": {
-        "class": "Tenant",
-	    "Pools": {"class":"Application","template":"generic"{{ if $services}},{{ end }}
-     {{ scratch.Set "first" true }}	    
-     {{ range $service,$junk := $services }}
-     	{{ $first := scratch.Get "first" }}{{ if eq $first false }},{{end}}{{ scratch.Set "first" false }}
-                        "domain_{{ $service }}": {
+        "class": "Tenant"{{ if $val }},
+	    "Pools": {"class":"Application","template":"generic",
+	    {{ range $pool, $members := $val }}
+{{ $y := scratch.Get "y" }}
+ {{ if $y }},{{end }}
+ {{ scratch.Set "y" 1 }}	    
+                        "domain_{{ $pool }}": {
                                 "class": "GSLB_Domain",
-                                "domainName": "{{ $service }}{{ if eq $key "Staging" }}.qa{{ end }}{{ if eq $key "Development" }}.dev{{ end}}.example.com",
+                                "domainName": "{{ $pool }}{{ if eq $key "Staging" }}.qa{{ end }}{{ if eq $key "Development" }}.dev{{ end}}.example.com",				
                                 "resourceRecordType": "A",
                                 "pools": [
-				{{ scratch.Set "y" true }}
-                          	{{ range $idx, $dc := datacenters }}
-   					{{ $pool_key := printf "/%s/%s/%s" $dc $key $service }}
-		
-					{{ $pool_state := scratch.Get $pool_key }}
+                      {{ scratch.Set "x" 0 }}				
+	      {{ range $member, $vs := $members }}
+                      {{ $x := scratch.Get "x" }}
+                      {{ if $x }},{{end }}
+                      {{ scratch.Set "x" 1 }}
+                      { "use": "gslb_{{ $member }}"}
+	            {{ end }}
+		    ] }
+                      {{ scratch.Set "x" 0 }}
 
-				{{ $y := scratch.Get "y" }}
-				{{ if $pool_state }}
-				{{ if eq $y false }},{{end}}
-				{{ scratch.Set "y" false }}
-				{
-                                                "use": "gslb_{{ $dc}}{{ $service }}"
-                                        }
-					{{ end }}
-					{{ end }}
-                                ]
-                        }
-     
-	{{ range $dc := datacenters }}
-	        {{ scratch.Set "status" "critical" }}
-          	{{ $svc_filter :=  printf "%s.%s@%s|any" $key $service $dc }}
-	       {{ range service $svc_filter }}
-		{{ if eq .Status "passing" }}	        {{ scratch.Set "status" "passing" }}{{ end }}
-		{{ else }}
-	        {{ scratch.Set "status" "none" }}		
-        	{{ end }}
-		{{ $status := scratch.Get "status" }}
-		{{ if ne $status "none" }}
-		{{ $pool_key := printf "/%s/%s/%s" $dc $key $service }}
-		
-		{{ $pool_state := scratch.Get $pool_key }}
+	      {{ range $member, $vs := $members }}
+		      {{ range $k, $v := $vs }}		     
+		         {{ if eq $k "Health" }} {{ scratch.Set "Health" $v }} {{ end }}
+		         {{ if eq $k "Vs" }} {{ scratch.Set "Vs" $v }} {{ end }}			 
 
-              ,"gslb_{{ $dc}}{{ $service }}": {
+		      {{ end }}
+		      {{ $status := scratch.Get "Health" }}
+      		      {{ $vs := scratch.Get "Vs" }}
+
+                      {{ $x := scratch.Get "x" }}
+
+              ,"gslb_{{ $member }}": {
                    "class": "GSLB_Pool",			
         	   {{ if  eq $status "critical" }}"enabled": false,{{end}}
+               {{ if keyExists "DnsDevice"}}		      		   
                 "members": [
                     {
                         "server": {
                             "use": "/Common/Shared/AS3Server"
                         },
-                       {{ $tenant_key := printf "%s@%s" $key $dc }}
-		       {{ $cnt := scratch.Get $tenant_key }}
-                        "virtualServer": "{{ $cnt }}"
+                        "virtualServer": "{{ $vs }}"
                     }
                 ],
+		    {{ end }} {{/* if keyExists DnsDevice */}}		
                 "resourceRecordType": "A"
             }		   
-		{{ end }} 
-	{{ end }} 
-     {{ end }}
-
-}}
-
+		      
+                      {{ scratch.Set "x" 1 }}
+	            {{ end }}
+  	      {{ end }} } {{/* end of populated tenant */}}
+	    {{ end }}
+        } {{/* end of Tenant?*/}}		     	      	    
 {{ end }}
-
-
 }
 
