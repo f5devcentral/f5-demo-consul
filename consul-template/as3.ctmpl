@@ -21,6 +21,8 @@
 {{ if ne $idx2 0 }},{{end}}
        {
          {{ if ne .Status "passing" }}"adminState":"disable",{{end}}
+	 {{ $priority := index .ServiceMeta "priority" }}
+	 {{ if  $priority }}"priorityGroup":{{ $priority }},{{end}}
          "servicePort": {{.Port}},
           "serverAddresses": [
           "{{.Address}}"
