@@ -1,9 +1,9 @@
 {
   "class": "ADC",
   "schemaVersion": "3.9.0",
-    "LifeGuard": {
-        "class": "Tenant",
-            "Pools": {"class":"Application","template":"generic",
+    "TrafficRouter": {
+        "class": "Tenant"{{ if ls "Tenant" }},
+	 "Pools": {"class":"Application","template":"generic",{{ end }}
 {{ scratch.Set "first" true }}
 {{ range ls "Tenant" }}
 {{ $first := scratch.Get "first" }}
@@ -26,4 +26,4 @@
 {{ end }}			 
     }
 }
-}
+{{ if ls "Tenant" }}}{{end}}
