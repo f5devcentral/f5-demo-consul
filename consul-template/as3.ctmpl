@@ -2,18 +2,18 @@
   "class": "ADC",
 {{ scratch.Set "first" true }}
 {{ range $tag, $services := services  | byTag }}
-{{ if ne $tag "as3" }}
+{{ $vs_key := printf "Tenant/%s" $tag }}	    
+{{ if keyExists $vs_key }}
 {{ $first := scratch.Get "first" }}
 {{ if eq $first false }}}},{{end}}
 {{ scratch.Set "first" false }}
     "{{ $tag }}": {
         "class": "Tenant",
 	    "Pools": {"class":"Application","template":"generic",
-{{ $vs_key := printf "Tenant/%s" $tag }}	    
-{{ if keyExists $vs_key }}
            "{{ $tag }}_choose_pool": {
             "class": "iRule",
-            "iRule": "when CLIENTSSL_CLIENTHELLO {\n    set sni_exists [SSL::extensions exists -type 0]\n    if { $sni_exists }\n    { binary scan [SSL::extensions -type 0] S1S1S1cS1a* ssl_ext_type ssl_ext_len ssl_ext_sn_list_len ssl_ext_sn_type ssl_ext_sn_len ssl_ext_sn }\n    if { [info exists ssl_ext_sn]} {\n      #log local0. \"$ssl_ext_sn\"\n      set pool_name [getfield $ssl_ext_sn \".\" 1]\n      #log local0. \"$pool_name\"\n      if { [catch { pool /{{ $tag }}/Pools/$pool_name } ] } {\n        #log local0. \"no such pool $pool_name\"\n      }\n    }\n}"},
+            "iRule": "when CLIENTSSL_CLIENTHELLO {\n    set sni_exists [SSL::extensions exists -type 0]\n    if { $sni_exists }\n    { binary scan [SSL::extensions -type 0] S1S1S1cS1a* ssl_ext_type ssl_ext_len ssl_ext_sn_list_len ssl_ext_sn_type ssl_ext_sn_len ssl_ext_sn }\n    if { [info exists ssl_ext_sn]} {\n      log local0. \"$ssl_ext_sn\"\n      set pool_name [getfield $ssl_ext_sn \".\" 1]\n      # not an ideal way to do this\n      set vs_name \"[getfield $ssl_ext_sn \".\" 1]_vs\"\n      log local0. \"$pool_name\"\n      log local0. \"$vs_name\"\n      if { [catch { virtual /Production/Pools/$vs_name } ] } {\n
+     log local0. \"no such vs $vs_name\"\n        if { [catch { pool /Production/Pools/$pool_name } ] } {\n        log local0. \"no such pool $pool_name\"\n      }\n      }\n      \n    }\n}"},
                          "{{ $tag }}snirouter": {
                 "class": "Service_TCP",
 		{{ $vs_key := printf "Tenant/%s" $tag }}
@@ -26,8 +26,31 @@
                    "{{ $tag }}_choose_pool"
                ]
                          },
-    {{ end }}{{/* end if keyExists */}}
 {{ range $idx,$service :=$services}}
+{{ $custom_as3 := printf "Service/%s" .Name }}
+{{ $svc_name := .Name }}
+{{ if keyExists $custom_as3 }}
+{{ $custom_as3 := key $custom_as3 | parseJSON}}
+{{ range $k,$v := $custom_as3 }}
+  "{{ $k }}":
+  {{ if eq $k "webcert" }} {
+    {{ range $k2, $v2 := $v }}
+      {{ $z := scratch.Get "z" }}
+      {{ if $z }},{{end}}
+      {{ scratch.Set "z" 1 }}
+        {{ if eq $k2 "passphrase" }}
+	{{ $secret_path := printf "secret/%s" $svc_name }}
+  	   "passphrase": {"ciphertext":"{{ with secret $secret_path }}{{ .Data.ciphertext|base64Encode}}{{ end }}","protected":"eyJhbGciOiJkaXIiLCJlbmMiOiJub25lIn0"}
+	{{ else }}
+        "{{ $k2 }}": {{ $v2 | toJSON}}
+	{{ end }}
+    {{ end }}
+    },
+  {{ else }}
+  {{ $v | toJSON}},
+  {{ end }}
+{{ end }}
+{{ end }}	    
 {{ if .Tags | contains "as3" }}
 {{ if ne $idx 0}},{{end}}
 {{ $name := printf "%s.%s|any" $tag .Name }}
