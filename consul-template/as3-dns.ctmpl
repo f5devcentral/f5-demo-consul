@@ -110,13 +110,13 @@
                            {{ end }}
 
 {{ range $key, $value := $gslb }}
-
-{{ scratch.MapSet "Tenants" $key $value }}
+  {{ if keyExists "DnsDevice"}}
+    {{ scratch.MapSet "Tenants" $key $value }}
+  {{ end }}
 {{ end }}
 {{ $tenants := scratch.Get "Tenants" }}
 
 {{ $services := scratch.Get "Services" }}
-
 {{ range $key, $val := $tenants }}
 {{ $z := scratch.Get "z" }}
  ,
