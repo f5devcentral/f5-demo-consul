@@ -9,6 +9,24 @@
     "{{ $tag }}": {
         "class": "Tenant",
 	    "Pools": {"class":"Application","template":"generic",
+{{ $vs_key := printf "Tenant/%s" $tag }}	    
+{{ if keyExists $vs_key }}
+           "{{ $tag }}_choose_pool": {
+            "class": "iRule",
+            "iRule": "when CLIENTSSL_CLIENTHELLO {\n    set sni_exists [SSL::extensions exists -type 0]\n    if { $sni_exists }\n    { binary scan [SSL::extensions -type 0] S1S1S1cS1a* ssl_ext_type ssl_ext_len ssl_ext_sn_list_len ssl_ext_sn_type ssl_ext_sn_len ssl_ext_sn }\n    if { [info exists ssl_ext_sn]} {\n      #log local0. \"$ssl_ext_sn\"\n      set pool_name [getfield $ssl_ext_sn \".\" 1]\n      #log local0. \"$pool_name\"\n      if { [catch { pool /{{ $tag }}/Pools/$pool_name } ] } {\n        #log local0. \"no such pool $pool_name\"\n      }\n    }\n}"},
+                         "{{ $tag }}snirouter": {
+                "class": "Service_TCP",
+		{{ $vs_key := printf "Tenant/%s" $tag }}
+                "virtualAddresses": ["{{ key $vs_key}}"],
+               "remark":"{{ $tag }}snirouter: f5demo.snirouter.tcp.v1",
+
+               "virtualPort": 443,
+               "persistenceMethods": ["tls-session-id"],
+               "iRules": [
+                   "{{ $tag }}_choose_pool"
+               ]
+                         },
+    {{ end }}{{/* end if keyExists */}}
 {{ range $idx,$service :=$services}}
 {{ if .Tags | contains "as3" }}
 {{ if ne $idx 0}},{{end}}
