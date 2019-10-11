@@ -9,7 +9,7 @@
 			 {{ scratch.MapSet "VirtualServer" $newkey .Value }}
                          {{ $tenant_key := printf "%s@%s" .Key $dc }}
                          {{ scratch.Set $tenant_key $cnt }}
-                         {{ scratch.MapSet "Tenants" .Key 0}}
+                         {{ scratch.MapSet "Tenants" .Key 1}}
 
                          {{ $cnt := $cnt | add 1 }}
                          {{ scratch.Set "cnt" $cnt }}
@@ -40,7 +40,7 @@
 
                       {{ $has_key := scratch.Key $tenant_key }} {{ if $has_key }}
 
-                         {{ scratch.MapSet "Tenants" $tag 1}}		      
+                         {{ scratch.MapSet "Tenants" $tag 0}}		      
 		      {{ end }}
 
 			 {{ $newkey := printf "%s/%s/%s%s/Vs" $tag $svc $dc $svc }}
@@ -111,10 +111,10 @@
 
 {{ range $key, $value := $gslb }}
   {{ if keyExists "DnsDevice"}}
-    {{ scratch.MapSet "Tenants" $key $value }}
+    {{ scratch.MapSet "NewTenants" $key $value }}
   {{ end }}
 {{ end }}
-{{ $tenants := scratch.Get "Tenants" }}
+{{ $tenants := scratch.Get "NewTenants" |explodeMap }}
 
 {{ $services := scratch.Get "Services" }}
 {{ range $key, $val := $tenants }}
@@ -122,7 +122,7 @@
  ,
  {{ scratch.Set "z" 1 }}
  {{ scratch.Set "y" 0 }}	     
-    "{{ $key }}Dns": {
+    "{{ $key }}Dns": { 
         "class": "Tenant"{{ if $val }},
 	    "Pools": {"class":"Application","template":"generic",
 	    {{ range $pool, $members := $val }}
@@ -160,12 +160,14 @@
         	   {{ if  eq $status "critical" }}"enabled": false,{{end}}
                {{ if keyExists "DnsDevice"}}		      		   
                 "members": [
+		   {{ if $vs }}
                     {
                         "server": {
                             "use": "/Common/Shared/AS3Server"
                         },
                         "virtualServer": "{{ $vs }}"
                     }
+		    {{ end }}
                 ],
 		    {{ end }} {{/* if keyExists DnsDevice */}}		
                 "resourceRecordType": "A"

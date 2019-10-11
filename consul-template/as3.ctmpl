@@ -12,8 +12,7 @@
 	    "Pools": {"class":"Application","template":"generic",
            "{{ $tag }}_choose_pool": {
             "class": "iRule",
-            "iRule": "when CLIENTSSL_CLIENTHELLO {\n    set sni_exists [SSL::extensions exists -type 0]\n    if { $sni_exists }\n    { binary scan [SSL::extensions -type 0] S1S1S1cS1a* ssl_ext_type ssl_ext_len ssl_ext_sn_list_len ssl_ext_sn_type ssl_ext_sn_len ssl_ext_sn }\n    if { [info exists ssl_ext_sn]} {\n      log local0. \"$ssl_ext_sn\"\n      set pool_name [getfield $ssl_ext_sn \".\" 1]\n      # not an ideal way to do this\n      set vs_name \"[getfield $ssl_ext_sn \".\" 1]_vs\"\n      log local0. \"$pool_name\"\n      log local0. \"$vs_name\"\n      if { [catch { virtual /Production/Pools/$vs_name } ] } {\n
-     log local0. \"no such vs $vs_name\"\n        if { [catch { pool /Production/Pools/$pool_name } ] } {\n        log local0. \"no such pool $pool_name\"\n      }\n      }\n      \n    }\n}"},
+            "iRule": "when CLIENTSSL_CLIENTHELLO {\n    set sni_exists [SSL::extensions exists -type 0]\n    if { $sni_exists }\n    { binary scan [SSL::extensions -type 0] S1S1S1cS1a* ssl_ext_type ssl_ext_len ssl_ext_sn_list_len ssl_ext_sn_type ssl_ext_sn_len ssl_ext_sn }\n    if { [info exists ssl_ext_sn]} {\n      log local0. \"$ssl_ext_sn\"\n      set pool_name [getfield $ssl_ext_sn \".\" 1]\n      # not an ideal way to do this\n      set vs_name \"[getfield $ssl_ext_sn \".\" 1]_vs\"\n      log local0. \"$pool_name\"\n      log local0. \"$vs_name\"\n      if { [catch { virtual /Production/Pools/$vs_name } ] } {\n     log local0. \"no such vs $vs_name\"\n        if { [catch { pool /Production/Pools/$pool_name } ] } {\n        log local0. \"no such pool $pool_name\"\n      }\n      }\n      \n    }\n}"},
                          "{{ $tag }}snirouter": {
                 "class": "Service_TCP",
 		{{ $vs_key := printf "Tenant/%s" $tag }}
