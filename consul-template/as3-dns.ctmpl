@@ -160,7 +160,7 @@
         	   {{ if  eq $status "critical" }}"enabled": false,{{end}}
                {{ if keyExists "DnsDevice"}}		      		   
                 "members": [
-		   {{ if $vs }}
+		   {{ if or $vs (eq $vs 0 ) }}
                     {
                         "server": {
                             "use": "/Common/Shared/AS3Server"
