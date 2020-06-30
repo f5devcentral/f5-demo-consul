@@ -5,7 +5,7 @@ F5 Demo - Consul.io
 Introduction
 ------------
 
-Examples of using Consul by HashiCorp with F5-BIG-IP
+Examples of using Consul by HashiCorp with F5-BIG-IP.
 
 Prerequisites
 ------------
@@ -17,11 +17,18 @@ Prerequisites
 Examples
 --------
 
+ 1. Using BIG-IP with AS3 Consul Service Discovery
  1. Using FQDN Pool
  1. Use an External Python script
+ 1. Use consul-template
  1. Use an iControlLX Worker
 
-1\. Using FQDN Pool
+1\. AS3 Consul Service Discovery
+--------------------------------
+
+Please visit: https://github.com/hashicorp/f5-terraform-consul-sd-webinar
+
+2\. Using FQDN Pool
 ------------------
 
 Configure BIG-IP to use Consul's [DNS Interface](https://www.consul.io/docs/agent/dns.html):
@@ -30,7 +37,7 @@ This works if all nodes for a service are using the same port (all pool members 
 
 ![Consul FQDN Pool](images/consul-fqdn-01.png)
 
-2\. Using an External Python script
+3\. Using an External Python script
 ----------------------------------
 
 The F5 Python SDK can be used (externally, not on the BIG-IP itself) with the Consul API to query for pool members.  This is useful in cases where you are using a dynamic range of pool member ports (i.e. with Registrator).
@@ -57,8 +64,20 @@ members = session.put(pool._meta_data['uri'],data=json.dumps({'members':pool_mem
 ...
 ```
 
-3\. Using iControlLX Worker
+4\. Using consul-template
+-------------------------
+
+Resources used to create the following DevCentral article about using consul-template can 
+be found in the directory "consul-template".
+
+https://devcentral.f5.com/s/articles/Consul-Templating-BIG-IP-Services
+
+5\. Using iControlLX Worker
 ----------------------------
+
+UPDATE 2020-06-30: I do NOT recommend this method, but leaving for archival purposes.
+Please use the AS3 Consul Service Discovery mechanism instead.  This was created before
+AS3 supported Consul.
 
 Starting in TMOS 13.1 you can extend the BIG-IP Management plane functions with Node.JS.  The following is an example of using a traditional TCL iApp to onboard an iControlLX worker (RPM file) and create a Node.JS process that queries the Consul API.  This emulates similar methods used by the [F5 Service Discovery iApp](https://github.com/F5Networks/f5-cloud-iapps/tree/master/f5-service-discovery)
 
