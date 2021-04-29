@@ -1,0 +1,98 @@
+title: Event Service Discovery
+description: This template will create a virtual server that will provide pass through access to a backend HTTPS services using SNI for routing
+definitions:
+  tenant:
+    title: Name of tenant
+    description: give a unique name for this tenant
+  virtualAddresses:
+    title: Virtual Addresses
+    description: IP addresses of virtual addresses (will create 80/443)
+    type: array
+    items:
+      type: string
+      format: ipv4    
+  services:
+    title: Services
+    description: List of services
+    type: array
+parameters:
+  services: ["app001","app002","app003"]
+  virtualAddresses: ["192.0.2.10"]
+template: |
+    {
+    "class": "ADC",
+    "schemaVersion": "3.24.0",
+    "id": "urn:uuid:94ef8b54-eb36-436a-b9ec-61b72c3da46a",
+    "label": "Event-Driven Service Discovery template",
+    "{{ tenant }}": {
+        "class": "Tenant",
+        "EventDrivenApps": {
+        "class": "Application",
+        "template": "generic",
+        "redirect": {
+            "class": "Service_HTTP",
+            "virtualAddresses": {{ virtualAddresses }},            
+            "iRules": [{"bigip":"/Common/_sys_https_redirect"}]
+        },
+        "vserver": {
+            "class": "Service_TCP",
+            "layer4": "tcp",
+            "persistenceMethods": [
+            "tls-session-id"
+            ],
+            "policyEndpoint": "vhosts",
+            "virtualAddresses": {{ virtualAddresses }},
+            "virtualPort": 443
+        },
+    {{ #services }}  "{{ . }}_pool": {
+        "class": "Pool",
+        "members": [
+        {
+          "servicePort": 443,
+          "addressDiscovery": "event"
+          }]
+        },
+    {{ /services }}
+        "vhosts": {
+            "class": "Endpoint_Policy",
+            "rules": [
+    {{ #services }}
+            {
+                "name": "{{ . }}",
+                "conditions": [
+                {
+                    "type": "sslExtension",
+                    "event": "ssl-client-hello",
+                    "serverName": {
+                    "operand": "starts-with",
+                    "values": [
+                        "{{ . }}."
+                    ]
+                    }
+                }
+                ],
+                "actions": [
+                {
+                    "type": "forward",
+                    "select": {
+                    "pool": {
+                        "use": "{{ . }}_pool"
+                    }
+                    }
+                }
+                ]
+            },
+    {{ /services }}
+                        {
+                        "name": "default",
+                        "actions": [
+                            {
+                                "type": "drop"
+                            }
+                        ]
+                    }
+            ]
+        }
+        }
+    }
+    }
